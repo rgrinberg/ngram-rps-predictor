@@ -64,7 +64,6 @@ module NgramPredictor (N : NGRAMTYPE) : NGRAM_PREDICTOR_TYPE
    *for performance reason we do not check if we are inserting a sequence
    *that is of the correct "window_size"
    *)
-  (*earr is of size window_size + 1*)
   let register_sequence t earr = 
     match t with
     | { store=h; window_size=size } ->
