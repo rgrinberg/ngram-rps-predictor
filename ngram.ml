@@ -19,6 +19,7 @@ module type NGRAM_PREDICTOR_TYPE = sig
   val create_empty : int -> t
   val register_sequence : t -> int array -> unit
   val predict_element : t -> int array -> int
+  (*val predict_with_freq : t -> int array -> int * int*)
 end
 (*}}}*)
 (*{{{NGRAM_HIERARCHY*)
@@ -27,6 +28,7 @@ module type NGRAM_HIERARCHY= sig
   (*referee is the final arbiter that decides which predictor to use.*)
   (*a simple maximum freq could picker could work here*)
   (*window_size * frequency = int * int*)
+  (*NOTE that it's better to pass along the actual decision itself*)
   val referee : (int * int) list -> int
 end
 (*}}}*)
@@ -120,25 +122,6 @@ module HierarchicalNGramPredictor (H : NGRAM_HIERARCHY) (N : NGRAM_PREDICTOR_TYP
                 | predictor -> (ws, N.predict_element predictor subseq)
                 ) |> H.referee
 end
-(*}}}*)
-(*{{{basic test of ngram predictor*)
-module CoinGram : NGRAMTYPE = struct
-  let num_elements = 2 (* elements are 0,1 *)
-  let pick_random () = Random.int num_elements
-  let referee a = List.hd a
-end
-module Pdr = NgramPredictor(CoinGram) 
-let ngram_tests() = 
-  let pdr = Pdr.create_empty 2 in
-  Pdr.register_sequence pdr [|0;0;1|];
-  Pdr.register_sequence pdr [|0;1;0|];
-  Pdr.register_sequence pdr [|1;0;1|];
-  Pdr.register_sequence pdr [|1;1;0|];
-  Pdr.register_sequence pdr [|1;1;1|];
-  print_endline "Predicting element...";
-  let predicted0 = Pdr.predict_element pdr [|0;0|] in
-  let predicted1 = Pdr.predict_element pdr [|1;0|] in
-  Printf.printf "(0,0 -> %d) -- (1,0 -> %d) \n" predicted0 predicted1
 (*}}}*)
 (*{{{RPS*)
 module RPS = struct
@@ -236,7 +219,7 @@ let rps_match () =
     print_endline "Your move:... \n";
     (*no cheating... we don't use human_move*)
     response := input_line stdin;
-    if !response = "q" then raise User_exit;
+    if (not (List.mem !response ["r";"p";"s"])) || !response = "q" then raise User_exit;
     let human_move = RPS.rps_of_string !response in
     let likely_move = 
       let likely_move_int = 
