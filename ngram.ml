@@ -1,9 +1,5 @@
 (*{{{NGRAMTYPE*)
 module type NGRAMTYPE = sig
-  (*Note: it's possible to eliminate this parameter altogether but then it*)
-  (*will be a little harder to create the NgramPredictors. This parameter*)
-  (*does not seem to be a huge restriction and is natural in most use cases*)
-  (*so we will spare it*)
   val num_elements : int 
   val pick_random : unit -> int
   (*in case two sequences have the same frequencies, referee will decide*)
@@ -41,6 +37,11 @@ let subsequence e size =
 let max_list l = List.fold_right (fun e acc ->
   if e > acc then e
   else acc ) (List.tl l) (List.hd l)
+(*
+ *given an array arr, arr_max_index returns a list of indices where every index
+ *points to a maximum value in the array
+ *example: arr_max_index [|1;0;1|] => [0;2]
+ *)
 let arr_max_index arr =
   let current_max_ind = ref [0] in
   for i=1 to (Array.length arr)-1 do
@@ -59,13 +60,11 @@ module NgramPredictor (N : NGRAMTYPE) : NGRAM_PREDICTOR_TYPE
     (*example: if window_size=3. then we take LLRL and use it*)
     (*to predict L when given LLR again*)
              window_size: int }
+
   let create_empty window = 
     { store = Hashtbl.create 100;
       window_size = window }
-  (*
-   *for performance reason we do not check if we are inserting a sequence
-   *that is of the correct "window_size"
-   *)
+
   let register_sequence t earr = 
     match t with
     | { store=h; window_size=size } ->
@@ -78,6 +77,7 @@ module NgramPredictor (N : NGRAMTYPE) : NGRAM_PREDICTOR_TYPE
           let new_v = Array.make N.num_elements 0 in
           new_v.(value) <- 1;
           Hashtbl.add h key new_v
+
   (*if we have no information then we will return a random element*)
   (*earr is of length t.window_size*)
   let predict_element t earr = 
@@ -85,6 +85,10 @@ module NgramPredictor (N : NGRAMTYPE) : NGRAM_PREDICTOR_TYPE
     | { store=h; window_size } ->
         try match Hashtbl.find h earr with
         | a -> 
+          (*
+           *a is an array of frequencies where the index corresponds to element
+           *and the value at the index corresponds to the frequency
+           *)
             let max_freq = arr_max_index a in
             if (List.length max_freq) = 1
             then List.hd max_freq
